@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from app.core.config import settings
 from supabase import create_client, Client
 
 
@@ -8,11 +7,11 @@ st.set_page_config(page_title="Finance Tracker AI Agent", page_icon="🤖", layo
 
 @st.cache_resource
 def init_connection():
-    return create_client(settings.supabase_url, settings.supabase_key)
+    return create_client(st.secrets["SUPABASE_URL"], st.secrets["SUPABASE_KEY"])
 
 supabase: Client = init_connection()
 
-BOT_PHONE_NUMBER = settings.admin_phone_number.replace("+", "")
+BOT_PHONE_NUMBER = st.secrets["ADMIN_PHONE_NUMBER"]
 WA_LINK = f"https://wa.me/{BOT_PHONE_NUMBER}?text=Hi"
 
 # USER FACING LANDING SECTION
