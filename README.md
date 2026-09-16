@@ -2,7 +2,7 @@
 
 An intelligent, WhatsApp-native personal finance tracking agent. It uses an LLM to parse conversational expenses, logs them into a PostgreSQL database, and features an autonomous background agent for automated reporting.
 
-![WhatsApp Chat Demo]![alt text](image.png)
+![WhatsApp Chat Demo]![alt text](images/whatsapp-chat-window.png)
 *Caption: The AI Agent extracting expenses from natural language and displaying the interactive text menu.*
 
 ---
@@ -15,7 +15,7 @@ An intelligent, WhatsApp-native personal finance tracking agent. It uses an LLM 
 * **Frictionless UI:** Numbered, text-based interactive menus within WhatsApp for quick actions (e.g., fetching summaries, deleting recent logs).
 * **Command Center Dashboard:** A Streamlit-based web UI for real-time KPIs, expense visualization, and approval queue management.
 
-![Admin Dashboard]![alt text](image-1.png)
+![Admin Dashboard]![alt text](images/admin-command-center.png)
 *Caption: The Super Admin Streamlit dashboard displaying live database metrics and charts.*
 
 ---
