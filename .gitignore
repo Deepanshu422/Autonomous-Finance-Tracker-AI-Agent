@@ -1,0 +1,16 @@
+# Dependencies & Virtual Environments
+node_modules/
+venv/
+.venv/
+
+# Environment Variables & Secrets
+.env
+.streamlit/secrets.toml
+
+# WhatsApp Session Data & Browser Cache
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Python Cache
+__pycache__/
+*.pyc
