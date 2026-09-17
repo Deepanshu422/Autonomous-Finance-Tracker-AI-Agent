@@ -1,6 +1,10 @@
 # 🤖 Autonomous Finance Tracker AI Agent
 
+[![Live Demo](https://img.shields.io/badge/Live_Dashboard-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit)](https://autonomous-finance-tracker-ai-agent.streamlit.app/)
+
 An intelligent, WhatsApp-native personal finance tracking agent. It uses an LLM to parse conversational expenses, logs them into a PostgreSQL database, and features an autonomous background agent for automated reporting.
+
+**🔗 [Access the Live Admin Dashboard Here](https://autonomous-finance-tracker-ai-agent.streamlit.app/)**
 
 ![WhatsApp Chat Demo]![alt text](assets/images/whatsapp-chat-window.png)
 *Caption: The AI Agent extracting expenses from natural language and displaying the interactive text menu.*
