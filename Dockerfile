@@ -2,7 +2,6 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install utilities, Python runtime, Node.js, and Chrome shared runtime libraries
 RUN apt-get update && apt-get install -y \
     curl \
     python3 \
@@ -45,7 +44,6 @@ RUN apt-get update && apt-get install -y \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Non-root user with UID 1000
 RUN useradd -m -u 1000 user
 USER user
 ENV HOME=/home/user \
@@ -61,4 +59,3 @@ RUN cd whatsapp-bridge && npm install
 EXPOSE 7860
 
 CMD ["bash", "start.sh"]
-EOF
