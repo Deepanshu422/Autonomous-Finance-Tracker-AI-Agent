@@ -32,6 +32,12 @@ const client = new Client({
 client.on('qr', (qr) => {
     console.log('📱 SCAN THIS QR CODE');
     qrcode.generate(qr, { small: true });
+
+    // --- FALLBACK BLOCK ---
+    console.log('\n⚠️ IF THE TERMINAL QR IS DISTORTED OR WON\'T SCAN, CLICK THIS LINK FOR A CLEAN IMAGE:');
+    const cleanUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}`;
+    console.log(cleanUrl);
+    console.log('-------------------------------------------------------------------\n');
 });
 
 client.on('ready', () => {
