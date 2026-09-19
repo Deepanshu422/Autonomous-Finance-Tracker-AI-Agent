@@ -49,7 +49,7 @@ client.on('qr', async (qr) => {
         pairingCodeRequested = true;
         try {
             // YOUR ACTUAL NUMBER GOES HERE 
-            const botPhoneNumber = process.env.ADMIN_PHONE_NUMBER; 
+            const botPhoneNumber = process.env.ADMIN_PHONE_NUMBER.replace('+', ''); 
             
             console.log(`🔄 Requesting 8-digit pairing code for ${botPhoneNumber}...`);
             const pairingCode = await client.requestPairingCode(botPhoneNumber);
