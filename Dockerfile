@@ -1,4 +1,4 @@
-FROM debian:11
+FROM debian:12
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -40,6 +40,7 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libxtst6 \
     xdg-utils \
+    chromium \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
@@ -53,7 +54,7 @@ WORKDIR $HOME/app
 
 COPY --chown=user . $HOME/app/
 
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 RUN cd whatsapp-bridge && npm install
 
 EXPOSE 7860
