@@ -6,10 +6,27 @@ const express = require('express');
 const lastMessageCache = {};
 
 const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: { args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--disable-gpu', '--disable-background-timer-throttling', 
-            '--disable-backgrounding-occluded-windows', 
-            '--disable-renderer-backgrounding'] }
+    authStrategy: new LocalAuth({ dataPath: './.wwebjs_auth' }),
+    puppeteer: {
+        executablePath: '/usr/bin/chromium',
+        headless: true,
+        args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--disable-extensions',
+            '--mute-audio',
+            '--disable-default-apps',
+            '--renderer-process-limit=1',
+            '--js-flags=--max-old-space-size=150'
+        ]
+    }
 });
 
 client.on('qr', (qr) => {
