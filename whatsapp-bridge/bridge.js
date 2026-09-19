@@ -29,15 +29,43 @@ const client = new Client({
     }
 });
 
-client.on('qr', (qr) => {
-    console.log('📱 SCAN THIS QR CODE');
-    qrcode.generate(qr, { small: true });
+// Add this to see exactly what the browser is doing in the background
+client.on('loading_screen', (percent, message) => {
+    console.log(`⏳ BROWSER LOADING: ${percent}% - ${message}`);
+});
 
-    // --- FALLBACK BLOCK ---
-    console.log('\n⚠️ IF THE TERMINAL QR IS DISTORTED OR WON\'T SCAN, CLICK THIS LINK FOR A CLEAN IMAGE:');
-    const cleanUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}`;
-    console.log(cleanUrl);
-    console.log('-------------------------------------------------------------------\n');
+// Flag to ensure we only request the pairing code once
+let pairingCodeRequested = false;
+
+client.on('qr', async (qr) => {
+    // 1. Print the clean image link immediately
+    console.log('\n======================================================');
+    console.log('📱 OPTION 1: SCAN CLEAN QR CODE IMAGE');
+    console.log(`🔗 Click here: https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}`);
+    console.log('======================================================\n');
+
+    // 2. Request the Pairing Code safely
+    if (!pairingCodeRequested) {
+        pairingCodeRequested = true;
+        try {
+            // YOUR ACTUAL NUMBER GOES HERE 
+            const botPhoneNumber = process.env.ADMIN_PHONE_NUMBER; 
+            
+            console.log(`🔄 Requesting 8-digit pairing code for ${botPhoneNumber}...`);
+            const pairingCode = await client.requestPairingCode(botPhoneNumber);
+            
+            console.log('\n======================================================');
+            console.log('🔢 OPTION 2: PAIRING CODE GENERATED');
+            console.log(`ENTER THIS CODE IN WHATSAPP: ${pairingCode}`);
+            console.log('======================================================\n');
+        } catch (error) {
+            console.error('❌ Pairing code failed to generate:', error.message);
+        }
+    }
+});
+
+client.on('auth_failure', msg => {
+    console.error('❌ Authentication Failure:', msg);
 });
 
 client.on('ready', () => {
