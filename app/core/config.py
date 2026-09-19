@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     supabase_key: str
     groq_api_key: str
     admin_phone_number: str
-
+    port: int
     # This tells Pydantic exactly where to look for our secrets locally.
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
