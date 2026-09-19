@@ -3,7 +3,6 @@ const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 const express = require('express');
 
-// 🔥 THIS WAS MISSING: We must define the cache at the very top!
 const lastMessageCache = {};
 
 const client = new Client({
@@ -51,7 +50,10 @@ client.on('message_create', async (msg) => {
     lastMessageCache[senderPhone] = msg;
 
     try {
-        const response = await axios.post('http://127.0.0.1:8000/api/v1/whatsapp', {
+        const INTERNAL_PORT = process.env.PORT || 7860;
+
+        // Update the axios call to using the dynamic port
+        const response = await axios.post(`http://127.0.0.1:${INTERNAL_PORT}/api/v1/whatsapp`, {
             sender_phone: senderPhone,
             message_body: text
         });
