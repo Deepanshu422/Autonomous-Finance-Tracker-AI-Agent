@@ -29,24 +29,15 @@ const client = new Client({
     }
 });
 
-client.on('qr', async (qr) => {
-    // Bypass the camera completely and request an 8-digit pairing code
-    try {
-        
-        const botPhoneNumber = process.env.ADMIN_PHONE_NUMBER; 
-        
-        const pairingCode = await client.requestPairingCode(botPhoneNumber);
-        
-        console.log('\n======================================================');
-        console.log('📱 CAMERA BYPASS: PAIRING CODE GENERATED');
-        console.log('1. Open WhatsApp on your Bot phone');
-        console.log('2. Go to Linked Devices -> Link a Device');
-        console.log('3. Tap "Link with phone number instead" at the bottom of the camera screen');
-        console.log(`4. Enter this 8-character code: ${pairingCode}`);
-        console.log('======================================================\n');
-    } catch (error) {
-        console.error('❌ Failed to generate pairing code:', error.message);
-    }
+client.on('qr', (qr) => {
+    console.log('📱 SCAN THIS QR CODE');
+    qrcode.generate(qr, { small: true });
+
+    // --- FALLBACK BLOCK ---
+    console.log('\n⚠️ IF THE TERMINAL QR IS DISTORTED OR WON\'T SCAN, CLICK THIS LINK FOR A CLEAN IMAGE:');
+    const cleanUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}`;
+    console.log(cleanUrl);
+    console.log('-------------------------------------------------------------------\n');
 });
 
 client.on('ready', () => {
@@ -82,7 +73,7 @@ client.on('message_create', async (msg) => {
     lastMessageCache[senderPhone] = msg;
 
     try {
-        const INTERNAL_PORT = process.env.PORT;
+        const INTERNAL_PORT = process.env.PORT || 7860;
 
         // Update the axios call to using the dynamic port
         const response = await axios.post(`http://127.0.0.1:${INTERNAL_PORT}/api/v1/whatsapp`, {
