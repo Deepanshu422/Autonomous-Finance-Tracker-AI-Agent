@@ -12,12 +12,13 @@ app.use(express.json());
 
 const lastMessageCache = {};
 let sock;
+let pairingCodeRequested = false; // Flag to prevent infinite pairing requests
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
     const version = [2, 3000, 1042626022];
 
-    // 1. Initialize the socket first so sock.ev exists
+    // 1. Initialize the socket
     sock = makeWASocket({
         version,
         logger: pino({ level: 'silent' }),
@@ -29,20 +30,43 @@ async function connectToWhatsApp() {
     // 2. Save credentials
     sock.ev.on('creds.update', saveCreds);
 
-    // 3. Connection & QR handler
+    // 3. Connection & QR / Pairing Code handler
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
-            console.log('\n📱 SCAN THIS QR CODE:');
+            console.log('\n======================================================');
+            console.log('📱 OPTION 1: SCAN THIS QR CODE');
             qrcode.generate(qr, { small: true });
+            
+            // Generate Pairing Code
+            const botPhoneNumber = process.env.ADMIN_PHONE_NUMBER;
+            if (botPhoneNumber && !pairingCodeRequested) {
+                pairingCodeRequested = true;
+                setTimeout(async () => {
+                    try {
+                        const code = await sock.requestPairingCode(botPhoneNumber);
+                        console.log('\n======================================================');
+                        console.log('🔢 OPTION 2: PAIRING CODE GENERATED');
+                        console.log(`ENTER THIS CODE IN WHATSAPP: ${code}`);
+                        console.log('======================================================\n');
+                    } catch (error) {
+                        console.error('❌ Failed to request pairing code:', error.message);
+                    }
+                }, 2000); // 2-second delay ensures QR renders first
+            } else if (!botPhoneNumber) {
+                console.log('💡 TIP: To use a pairing code on Render, add a BOT_PHONE_NUMBER environment variable (e.g., 919876543210).');
+                console.log('======================================================\n');
+            }
         }
 
         if (connection === 'close') {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             console.log(`⚠️ Connection closed (${statusCode}). Reconnecting: ${shouldReconnect}`);
+            
             if (shouldReconnect) {
+                pairingCodeRequested = false; // Reset flag on reconnect
                 setTimeout(connectToWhatsApp, 5000);
             }
         } else if (connection === 'open') {
@@ -83,7 +107,6 @@ async function connectToWhatsApp() {
         if (msg.key.remoteJidAlt && msg.key.remoteJidAlt.includes('@s.whatsapp.net')) {
             phoneJid = msg.key.remoteJidAlt;
             console.log("phoneJid 2",phoneJid)
-
         }
 
         const senderPhone = '+' + phoneJid.split('@')[0];
