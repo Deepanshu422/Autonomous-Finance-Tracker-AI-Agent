@@ -31,31 +31,33 @@ async function connectToWhatsApp() {
     sock.ev.on('creds.update', saveCreds);
 
     // 3. Connection & QR / Pairing Code handler
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
-        if (qr) {
-            console.log('\n======================================================');
-            console.log('📱 OPTION 1: SCAN THIS QR CODE');
-            qrcode.generate(qr, { small: true });
-            
-            // Generate Pairing Code
+        // Ensure we only request authentication if the device is not already registered
+        if (qr && !sock.authState.creds.registered) {
             const botPhoneNumber = process.env.ADMIN_PHONE_NUMBER;
-            if (botPhoneNumber && !pairingCodeRequested) {
-                pairingCodeRequested = true;
-                setTimeout(async () => {
+            
+            if (botPhoneNumber) {
+                if (!pairingCodeRequested) {
+                    pairingCodeRequested = true;
+                    console.log('\n======================================================');
+                    console.log(`🔄 Requesting 8-digit pairing code for ${botPhoneNumber}...`);
+                    
                     try {
                         const code = await sock.requestPairingCode(botPhoneNumber);
-                        console.log('\n======================================================');
-                        console.log('🔢 OPTION 2: PAIRING CODE GENERATED');
+                        console.log('🔢 PAIRING CODE GENERATED');
                         console.log(`ENTER THIS CODE IN WHATSAPP: ${code}`);
                         console.log('======================================================\n');
                     } catch (error) {
                         console.error('❌ Failed to request pairing code:', error.message);
                     }
-                }, 2000); // 2-second delay ensures QR renders first
-            } else if (!botPhoneNumber) {
-                console.log('💡 TIP: To use a pairing code on Render, add a BOT_PHONE_NUMBER environment variable (e.g., 919876543210).');
+                }
+            } else {
+                console.log('\n======================================================');
+                console.log('📱 SCAN THIS QR CODE TO LOGIN:');
+                qrcode.generate(qr, { small: true });
+                console.log('💡 TIP: To use a pairing code, set the BOT_PHONE_NUMBER environment variable (digits only).');
                 console.log('======================================================\n');
             }
         }
@@ -66,8 +68,10 @@ async function connectToWhatsApp() {
             console.log(`⚠️ Connection closed (${statusCode}). Reconnecting: ${shouldReconnect}`);
             
             if (shouldReconnect) {
-                pairingCodeRequested = false; // Reset flag on reconnect
+                pairingCodeRequested = false; // Reset flag so it can request a new code on reconnect
                 setTimeout(connectToWhatsApp, 5000);
+            } else {
+                console.log('🛑 Logged out. Delete baileys_auth_info/ to start fresh.');
             }
         } else if (connection === 'open') {
             console.log('✅ Baileys WebSocket Bridge is ready & authenticated!');
