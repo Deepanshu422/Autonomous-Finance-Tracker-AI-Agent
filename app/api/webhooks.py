@@ -15,7 +15,7 @@ async def handle_whatsapp_message(payload: WhatsAppMessage):
     whatsapp_lid = payload.sender_phone
     text = payload.message_body.strip()
     text_lower = text.lower()
-
+    print("lid or num", whatsapp_lid)
     # getting info
     user = get_user_by_lid(whatsapp_lid)
 
