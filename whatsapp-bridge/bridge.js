@@ -3,6 +3,7 @@ const pino = require('pino');
 const express = require('express');
 const axios = require('axios');
 const qrcode = require('qrcode-terminal');
+require('dotenv').config();
 
 const INTERNAL_PORT = process.env.PORT || 7860;
 const EXPRESS_PORT = process.env.BRIDGE_PORT || 3000;
@@ -36,8 +37,7 @@ async function connectToWhatsApp() {
 
         // Ensure we only request authentication if the device is not already registered
         if (qr && !sock.authState.creds.registered) {
-            let PhoneNumber = process.env.ADMIN_PHONE_NUMBER;
-            const botPhoneNumber = PhoneNumber.split('')[1];
+            const botPhoneNumber = process.env.BOT_PHONE_NUMBER;
             
             if (botPhoneNumber) {
                 if (!pairingCodeRequested) {
