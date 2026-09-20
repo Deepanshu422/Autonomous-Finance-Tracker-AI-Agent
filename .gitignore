@@ -10,6 +10,7 @@ venv/
 # WhatsApp Session Data & Browser Cache
 .wwebjs_auth/
 .wwebjs_cache/
+whatsapp-bridge/baileys_auth_info/
 
 # Python Cache
 __pycache__/
