@@ -36,7 +36,8 @@ async function connectToWhatsApp() {
 
         // Ensure we only request authentication if the device is not already registered
         if (qr && !sock.authState.creds.registered) {
-            const botPhoneNumber = process.env.ADMIN_PHONE_NUMBER;
+            let PhoneNumber = process.env.ADMIN_PHONE_NUMBER;
+            const botPhoneNumber = PhoneNumber.split('')[1];
             
             if (botPhoneNumber) {
                 if (!pairingCodeRequested) {
