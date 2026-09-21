@@ -30,15 +30,17 @@ This system utilizes a microservices-inspired architecture to separate the messa
 
 ```text
 [WhatsApp User] 
-       │
+       │ (Meta WebSocket)
        ▼
-[Node.js Bridge] ──────► Outbound Gateway (whatsapp-web.js + LocalAuth)
-       │                 Handles real-time push notifications & LID routing
-       ▼
-[FastAPI Backend] ─────► The Core Agentic System
+[Node.js Bridge] ──────► Outbound Gateway (Baileys + useMultiFileAuthState)
+       │ ▲               Runs Express on Port 3000 to receive scheduled alerts
+       │ │
+       │ │ (Path A: Direct Reply / Path B: Scheduled Push)
+       ▼ │
+[FastAPI Backend] ─────► The Core Agentic System (Port 7860)
        ├── [Access Guard]   (Validates user state and permissions)
        ├── [LLM Parser]     (Groq API extracts structured JSON)
-       ├── [Task Scheduler] (APScheduler handles automated cron jobs)
+       ├── [Task Scheduler] (APScheduler cron jobs -> POSTs to Node.js Port 3000)
        └── [Database]       (Supabase/PostgreSQL manages relationships & cascades)
        
 [Streamlit UI] ────────► Super Admin Visual Dashboard
