@@ -1,50 +1,14 @@
-FROM debian:12
+FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y \
-    curl \
-    python3 \
-    python3-pip \
-    ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libc6 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libexpat1 \
-    libfontconfig1 \
-    libgbm1 \
-    libgcc1 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libstdc++6 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    xdg-utils \
-    chromium \
+# Install curl and Node.js
+RUN apt-get update && apt-get install -y curl \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# Security: Run as non-root user
 RUN useradd -m -u 1000 user
 USER user
 ENV HOME=/home/user \
@@ -52,10 +16,16 @@ ENV HOME=/home/user \
 
 WORKDIR $HOME/app
 
-COPY --chown=user . $HOME/app/
+# 1. Copy ONLY dependency files first to leverage Docker layer caching
+COPY --chown=user requirements.txt .
+COPY --chown=user whatsapp-bridge/package.json whatsapp-bridge/
 
-RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
+# 2. Install dependencies before copying code
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 RUN cd whatsapp-bridge && npm install
+
+# 3. Copy the rest of the application code
+COPY --chown=user . $HOME/app/
 
 EXPOSE 7860
 
