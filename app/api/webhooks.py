@@ -173,12 +173,12 @@ async def handle_whatsapp_message(payload: WhatsAppMessage):
     try:
         parsed_data = extract_expense_data(text)
         print("test", parsed_data)
-        if parsed_data:
-            insert_expense(
+
+        if parsed_data and parsed_data.get("expenses"):
+            expenses_list = parsed_data["expenses"]
+            inserted_records = insert_expense(
                 user_id=user["id"],
-                amount=parsed_data["amount"],
-                category=parsed_data["category"],
-                description=parsed_data["item_description"]
+                expenses_list=expenses_list
             )
 
             # Attaching Action Menu
@@ -187,8 +187,19 @@ async def handle_whatsapp_message(payload: WhatsAppMessage):
                 "Reply *2* for Weekly Summary\n"
                 "Reply *3* to Delete Last Expense"
             )
-
-            return {"reply": f"✅ Logged ₹{parsed_data['amount']} under '{parsed_data['category']}' ({parsed_data['item_description']})." + menu_text}
+            if inserted_records:
+                # 2. Build a summary breakdown message for WhatsApp
+                total_spent = sum(item["amount"] for item in expenses_list)
+                
+                if len(expenses_list) > 1:
+                    lines = [f"• ₹{item['amount']} - {item['category']} ({item.get('item_description', '')})" for item in expenses_list]
+                    reply_msg = f"✅ *Saved {len(expenses_list)} expenses:*\n" + "\n".join(lines) + f"\n\n*Total:* ₹{total_spent}"
+                else:
+                    item = expenses_list[0]
+                    desc = f" ({item['item_description']})" if item.get("item_description") else ""
+                    reply_msg = f"✅ *Saved:* ₹{item['amount']} for {item['category']}{desc}"
+                
+                return {"reply": f"{reply_msg}" + menu_text}
         else:
             return {"reply": "❌ I couldn't understand that expense. Please try again (e.g., 'spent 50 on chai')."}
     except Exception as e:

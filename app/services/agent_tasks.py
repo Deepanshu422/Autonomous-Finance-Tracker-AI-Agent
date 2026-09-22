@@ -48,6 +48,6 @@ async def send_weekly_summary():
 
 def start_agent_scheduler():
     # Set to run daily at exactly 12:35 PM
-    scheduler.add_job(send_weekly_summary, 'cron', hour=22, minute=00)
+    scheduler.add_job(send_weekly_summary, 'cron', hour=23, minute=30)
     scheduler.start()
     print("⏰ Autonomous Agent Scheduler started for 12:35 daily!")
