@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     port: int
     bridge_port: int
     # This tells Pydantic exactly where to look for our secrets locally.
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 # Initialized the globally available instance
 settings = Settings()

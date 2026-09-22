@@ -1,14 +1,14 @@
 import json
 from groq import Groq
 from app.core.config import settings
-from app.models.schemas import ExpenseDetailsExtraction
+from app.models.schemas import ExpenseExtraction
 
 # Intializing 'Groq' client
 client = Groq(api_key=settings.groq_api_key)
 
 def extract_expense_data(user_text: str) -> dict | None:
     # Converting Pydantic Model into string
-    schema_definition = ExpenseDetailsExtraction.model_json_schema()
+    schema_definition = ExpenseExtraction.model_json_schema()
 
     system_prompt = f"""
     Extract the expense details from the user's text.
@@ -32,7 +32,9 @@ def extract_expense_data(user_text: str) -> dict | None:
         parsed_data = json.loads(raw_json)
 
         # verifying using our Pydantic Model
-        validated_data = ExpenseDetailsExtraction(**parsed_data)
+        print("Parsed Data :", parsed_data)
+
+        validated_data = ExpenseExtraction.model_validate(parsed_data)
 
         return validated_data.model_dump()
 

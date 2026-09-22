@@ -76,13 +76,19 @@ def delete_user(target_phone: str):
     response = supabase.table("users").delete().eq("phone_number", target_phone).execute()
     return response.data[0] if response.data else None
     
-def insert_expense(user_id: str, amount: float, category: str, description: str = "") -> dict | None:
-    # Saves expense using the UUID Foreign Key.
-    data = {
-        "user_id": user_id,  # Linked to users.id
-        "amount": amount,
-        "category": category,
-        "description": description
-    }
-    response = supabase.table("expenses").insert(data).execute()
-    return response.data[0] if response.data else None
+def insert_expense(user_id: str, expenses_list: list[dict]) -> list[dict] | None:
+    # 1. Format the data into a list of dictionaries mapping to your database columns
+    batch_data = [
+        {
+            "user_id": user_id,
+            "amount": exp["amount"],
+            "category": exp["category"],
+            "description": exp.get("item_description", "")
+        }
+        for exp in expenses_list
+    ]
+    
+    # inserting into db
+    response = supabase.table("expenses").insert(batch_data).execute()
+    
+    return response.data if response.data else None
