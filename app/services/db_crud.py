@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from supabase import create_client, Client
 from app.core.config import settings
 
@@ -10,18 +10,64 @@ def get_latest_pending_user() -> dict | None:
     response = supabase.table("users").select("*").eq("is_approved", False).order("created_at", desc=True).limit(1).execute()
     return response.data[0] if response.data else None
 
-def get_weekly_summary(user_id: str) -> float:
-    # Calculates the total spent by a user in the last 7 days.
-    seven_days_ago = (datetime.now() - timedelta(days=7)).isoformat()
-    response = supabase.table("expenses").select("amount", "category").eq("user_id", user_id).gte("created_at", seven_days_ago).execute()
+def toggle_summary_alerts(user_id: str) -> str:
+    user_response = supabase.table("users").select("daily_summary_active").eq("id", user_id).execute()
+    if not user_response.data:
+        return "❌ User profile not found."
+
+    new_state = not user_response.data[0].get("daily_summary_active", True)
+    supabase.table("users").update({"daily_summary_active": new_state}).eq("id", user_id).execute()
+    
+    status_text = "resumed 🟢" if new_state else "paused ⏸️"
+    return f"✅ Your daily summaries are now {status_text}." 
+
+def update_summary_time(user_id: str, new_time: str) -> str:
+    try:
+        supabase.table("users").update({"daily_summary_time": new_time}).eq("id", user_id).execute()
+        return f"⏰ Daily summary time successfully changed to {new_time}."
+    except Exception:
+        return "❌ Failed to update time. Please try again."
+
+def format_summary_message(timeframe: str, summary_data: dict) -> str:
+    
+    # Takes summary dict and formats it in whatsApp-friendly message.
+    
+    if summary_data["total"] > 0:
+        message = f"📊 *{timeframe} Expense Summary*\n\n"
+        for cat, amt in summary_data["categories"].items():
+            message += f"• {cat.title()} : ₹{amt}\n"
+        message += f"\nTotal spent: *₹{summary_data['total']}*"
+        return message
+    else:
+        return f"📊 *{timeframe} Expense Summary*\n\nYou spent *₹0*. Great job saving!"
+
+def get_summary(user_id: str, days: int) -> dict:
+    
+    # Calculating user's total spending dynamically based on the 'days' parameter.
+
+    # Supabase databases are set to UTC by default
+    start_date = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    
+    response = supabase.table("expenses") \
+        .select("amount", "category") \
+        .eq("user_id", user_id) \
+        .gte("created_at", start_date) \
+        .execute()
 
     summary_data = {"categories": {}, "total": 0.0}
+    
     if response.data:
         for item in response.data:
-            category = item["category"]
-            amount = item["amount"]
+            category = item.get("category", "Uncategorized")
+            amount = float(item.get("amount", 0.0))
+            
+            # Aggregate categories dynamically
             summary_data["categories"][category] = summary_data["categories"].get(category, 0.0) + amount
             summary_data["total"] += amount
+
+    summary_data["total"] = round(summary_data["total"], 2)
+    for cat in summary_data["categories"]:
+        summary_data["categories"][cat] = round(summary_data["categories"][cat], 2)
 
     return summary_data
 

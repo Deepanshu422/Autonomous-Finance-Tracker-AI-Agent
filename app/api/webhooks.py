@@ -1,8 +1,8 @@
 import re
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from app.models.schemas import WhatsAppMessage
-from app.services.db_crud import delete_latest_expense, get_weekly_summary, get_latest_pending_user, get_user_by_lid, get_user_by_phone, register_pending_user, update_user_role, delete_user, insert_expense
-from app.services.llm_parser import extract_expense_data
+from app.services.db_crud import delete_latest_expense, get_summary, get_latest_pending_user, get_user_by_lid, get_user_by_phone, register_pending_user, update_user_role, delete_user, insert_expense, format_summary_message, toggle_summary_alerts
+from app.services.llm_parser import extract_expense_data, process_with_groq
 from app.core.config import settings
 from titlecase import titlecase
 
@@ -151,57 +151,91 @@ async def handle_whatsapp_message(payload: WhatsAppMessage):
              return {"reply": "❌ Unknown command. Available commands: #approve, #reject, #makeadmin"}
 
     """USER MAIN MENU COMMANDS"""
-    if text == "2":
-        summary_data = get_weekly_summary(user["id"])
-
-        reply_msg = "📊 *Your Weekly Summary*\n\nYour spending in the last 7 days:\n"
-        for category, amount in summary_data["categories"].items():
-            reply_msg += f"{titlecase(category)} : ₹{amount}\n"
-
-        reply_msg += f"\nYou spent a total of *₹{summary_data['total']}* in the last 7 days."
-        return {"reply": reply_msg}
+    
+    if text == "1":
+        return {"reply": "✏️ Please type your expense (e.g., 'Spent 500 on groceries')."}
+        
+    elif text == "2":
+        summary_data = get_summary(user["id"], days=1)
+        return {"reply": format_summary_message("Yesterday's", summary_data)}
         
     elif text == "3":
+        summary_data = get_summary(user["id"], days=7)
+        return {"reply": format_summary_message("7-Day", summary_data)}
+        
+    elif text == "4":
+        summary_data = get_summary(user["id"], days=30)
+        return {"reply": format_summary_message("30-Day", summary_data)}
+        
+    elif text == "5":
+        return {"reply": toggle_summary_alerts(user["id"])}
+        
+    elif text == "6":
+        return {
+            "reply": (
+                "🕒 *Change Daily Alert Time*\n\n"
+                "To update your *Daily Summary Time*, reply with the word **Time** followed by your preferred time.\n\n"
+                "💡 *Examples:*\n"
+                "• `Time 8PM`\n"
+                "• `Time 08:30 PM`\n"
+                "• `Time 21:00`"
+            )
+        }
+        
+    elif text_lower.startswith("time "):
+        # Extract everything after "time " (e.g., "8PM" or "08:30 PM")
+        time_request = text[5:].strip()
+        
+        # Send strictly the time string to your tool-calling Groq parser
+        reply_msg = process_with_groq(time_request, user["id"])
+        return {"reply": reply_msg}
+    elif text == "7":
         deleted_exp = delete_latest_expense(user["id"])
         if deleted_exp:
             return {"reply": f"🗑️ Deleted last expense: ₹{deleted_exp['amount']} for '{deleted_exp['category']}'."}
         return {"reply": "❌ No recent expenses found to delete."}
+        
+    else:
+        """EXPENSE LOGGING & NATURAL LANGUAGE"""
+        try:
+            # Send the raw text to Groq for extraction
+            parsed_data = extract_expense_data(text)
+            print("test", parsed_data)
 
-    
-    """EXPENSE LOGGING"""
+            if parsed_data and parsed_data.get("expenses"):
+                expenses_list = parsed_data["expenses"]
+                inserted_records = insert_expense(
+                    user_id=user["id"],
+                    expenses_list=expenses_list
+                )
 
-    try:
-        parsed_data = extract_expense_data(text)
-        print("test", parsed_data)
-
-        if parsed_data and parsed_data.get("expenses"):
-            expenses_list = parsed_data["expenses"]
-            inserted_records = insert_expense(
-                user_id=user["id"],
-                expenses_list=expenses_list
-            )
-
-            # Attaching Action Menu
-            menu_text = (
-                "\n\n📊 *Main Menu:*\n"
-                "Reply *2* for Weekly Summary\n"
-                "Reply *3* to Delete Last Expense"
-            )
-            if inserted_records:
-                # 2. Build a summary breakdown message for WhatsApp
-                total_spent = sum(item["amount"] for item in expenses_list)
+                # Updated short contextual menu (Matches new Option 3 and Option 7)
+                menu_text = (
+                    "\n\n📊 *Main Menu:*\n"
+                    "Reply *1* to Add Expense\n"
+                    "Reply *2* for Yesterday's Summary\n"
+                    "Reply *3* for 7-Day Summary\n"
+                    "Reply *4* for 30-Day Summary\n"
+                    "Reply *5* to Pause/Resume Alerts\n"
+                    "Reply *6* to Change Alert Time\n"
+                    "Reply *7* to Delete Last Expense"
+                )
                 
-                if len(expenses_list) > 1:
-                    lines = [f"• ₹{item['amount']} - {item['category']} ({item.get('item_description', '')})" for item in expenses_list]
-                    reply_msg = f"✅ *Saved {len(expenses_list)} expenses:*\n" + "\n".join(lines) + f"\n\n*Total:* ₹{total_spent}"
-                else:
-                    item = expenses_list[0]
-                    desc = f" ({item['item_description']})" if item.get("item_description") else ""
-                    reply_msg = f"✅ *Saved:* ₹{item['amount']} for {item['category']}{desc}"
+                if inserted_records:
+                    total_spent = sum(item["amount"] for item in expenses_list)
+                    
+                    if len(expenses_list) > 1:
+                        lines = [f"• ₹{item['amount']} - {item['category']} ({item.get('item_description', '')})" for item in expenses_list]
+                        reply_msg = f"✅ *Saved {len(expenses_list)} expenses:*\n" + "\n".join(lines) + f"\n\n*Total:* ₹{total_spent}"
+                    else:
+                        item = expenses_list[0]
+                        desc = f" ({item['item_description']})" if item.get("item_description") else ""
+                        reply_msg = f"✅ *Saved:* ₹{item['amount']} for {item['category']}{desc}"
+                    
+                    return {"reply": f"{reply_msg}" + menu_text}
+            else:
+                return {"reply": "❌ I couldn't understand that. Please try typing your expense again (e.g., 'spent 50 on chai')."}
                 
-                return {"reply": f"{reply_msg}" + menu_text}
-        else:
-            return {"reply": "❌ I couldn't understand that expense. Please try again (e.g., 'spent 50 on chai')."}
-    except Exception as e:
-        print(f"Error parsing expense: {e}")
-        return {"reply": "❌ An error occurred while processing your expense."}
+        except Exception as e:
+            print(f"Error parsing expense: {e}")
+            return {"reply": "❌ An error occurred while processing your request."}
