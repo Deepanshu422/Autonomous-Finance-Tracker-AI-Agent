@@ -1,7 +1,8 @@
 import json
 from groq import Groq
 from app.core.config import settings
-from app.models.schemas import ExpenseExtraction
+from app.models.schemas import ExpenseExtraction, UpdateAlertTime, RouteToExpense
+from app.services.db_crud import update_summary_time
 
 # Intializing 'Groq' client
 client = Groq(api_key=settings.groq_api_key)
@@ -42,7 +43,43 @@ def extract_expense_data(user_text: str) -> dict | None:
         print(f"Extraction failed : {e}")
         return None
     
+def process_with_groq(user_text: str, user_id: str) -> str:
+    """
+    Dedicated function for Option 6. 
+    Uses native Tool Calling with Pydantic to parse time accurately.
+    """
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "update_alert_time",
+                "parameters": UpdateAlertTime.model_json_schema()
+            }
+        }
+    ]
 
-        
+    try:
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {"role": "system", "content": "Extract the time and convert to 24-hour HH:MM:SS format."},
+                {"role": "user", "content": user_text}
+            ],
+            tools=tools,
+            tool_choice={"type": "function", "function": {"name": "update_alert_time"}}, # Force the tool
+            temperature=0.0
+        )
 
+        tool_calls = response.choices[0].message.tool_calls
 
+        if tool_calls:
+            args = json.loads(tool_calls[0].function.arguments)
+            time_str = args.get("time_str")
+            # Execute database update
+            return update_summary_time(user_id, time_str)
+
+        return "❌ Could not detect a valid time."
+
+    except Exception as e:
+        print(f"Time extraction failed: {e}")
+        return "❌ System error while updating time."

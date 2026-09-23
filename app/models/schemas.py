@@ -8,7 +8,7 @@ class ExpenseDetailsExtraction(BaseModel):
     amount: float = Field(..., description="Total Amount Spent. Numbers only.")
     category: Literal [
         "Food", "Travel", "Shopping", "Bills & Recharges", "Stationary",
-        "Money Transfers", "Entertainment", "Medical", "Grocery", "Sports"
+        "Money Transfers", "Entertainment", "Medical", "Grocery", "Sports",
         "Investment", "Donation", "Financial Services", 
         "Education", "Subscriptions", "Others"
     ] = Field(..., description="Expense Category (e.g., 'Sports', 'Food', 'Grocery').")
@@ -21,3 +21,9 @@ class ExpenseExtraction(BaseModel):
 class WhatsAppMessage(BaseModel):
     sender_phone: str
     message_body: str
+
+class UpdateAlertTime(BaseModel):
+    time_str: str = Field(..., description="Strict 24hr format HH:MM:SS. Example: 8 PM is 20:00:00")
+
+class RouteToExpense(BaseModel):
+    pass
