@@ -17,6 +17,9 @@ An intelligent, multimodal WhatsApp-native personal finance tracking agent. It u
 ![WhatsApp Chat Demo]![alt text](assets/images/whatsapp-chat-window.png)
 *Caption: The AI Agent extracting expenses from natural language and displaying the interactive text menu.*
 
+![Voice Note Demo](assets/images/voice-note-demo.png)
+*Caption: Seamless Speech-to-Text processing. Users can simply speak their expenses via voice notes without typing.*
+
 ---
 
 ## ⚡ Key Features
