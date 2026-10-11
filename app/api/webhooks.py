@@ -2,10 +2,12 @@ import re
 from fastapi import APIRouter
 from app.models.schemas import WhatsAppMessage
 from app.services.db_crud import delete_latest_expense, get_summary, get_latest_pending_user, get_user_by_lid, get_user_by_phone, register_pending_user, update_user_role, delete_user, insert_expense, format_summary_message, toggle_summary_alerts
-from app.services.llm_parser import extract_expense_data, process_with_groq
+from app.services.llm_parser import extract_expense_data, process_with_groq, transcribe_voice_note
 from app.core.config import settings
 from titlecase import titlecase
-
+import os
+import base64
+import tempfile
 
 # Create a router specifically for webhook endpoints
 router = APIRouter()
@@ -13,13 +15,29 @@ router = APIRouter()
 @router.post("/whatsapp")
 async def handle_whatsapp_message(payload: WhatsAppMessage):
     whatsapp_lid = payload.sender_phone
-    text = payload.message_body.strip()
-    text_lower = text.lower()
+    # 'text' should be empty string if message is voice note
+    text = payload.message_body.strip() if payload.message_body else ""
+
+    print("text message body : ", text)
+
     print("lid or num", whatsapp_lid)
     # getting info
     user = get_user_by_lid(whatsapp_lid)
 
     """REGISTRATION FLOW"""
+
+    # Intercept and Transcribe Audio
+    if payload.audio_base64:
+        print(f"🎤 Processing voice note from {whatsapp_lid}...")
+        transcribed_text = await transcribe_voice_note(payload.audio_base64)
+        
+        if not transcribed_text:
+             return {"reply": "Sorry, I couldn't process your voice note. Please try typing instead."}
+             
+        text = transcribed_text.strip()
+        print(f"📝 Transcribed Text: {text}")
+
+    text_lower = text.lower()
 
     if not user:
         # Check if user replying with the correct format
@@ -199,7 +217,7 @@ async def handle_whatsapp_message(payload: WhatsAppMessage):
         """EXPENSE LOGGING & NATURAL LANGUAGE"""
         try:
             # Send the raw text to Groq for extraction
-            parsed_data = extract_expense_data(text)
+            parsed_data = await extract_expense_data(text)
             print("test", parsed_data)
 
             if parsed_data and parsed_data.get("expenses"):

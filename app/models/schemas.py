@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Literal, List
+from typing import Literal, List, Optional
 
 # This model forces the AI to output exactly this JSON structure
 class ExpenseDetailsExtraction(BaseModel):
@@ -21,6 +21,7 @@ class ExpenseExtraction(BaseModel):
 class WhatsAppMessage(BaseModel):
     sender_phone: str
     message_body: str
+    audio_base64: Optional[str] = None
 
 class UpdateAlertTime(BaseModel):
     time_str: str = Field(..., description="Strict 24hr format HH:MM:SS. Example: 8 PM is 20:00:00")

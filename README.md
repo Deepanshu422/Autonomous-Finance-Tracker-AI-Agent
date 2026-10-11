@@ -1,8 +1,16 @@
 # 🤖 Autonomous Finance Tracker AI Agent
 
 [![Live Demo](https://img.shields.io/badge/Live_Dashboard-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit)](https://autonomous-finance-tracker-ai-agent.streamlit.app/)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![Pydantic](https://img.shields.io/badge/Pydantic-E92063?style=for-the-badge&logo=pydantic&logoColor=white)
+![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
+![WhatsApp/Baileys](https://img.shields.io/badge/WhatsApp_Baileys-25D366?style=for-the-badge&logo=whatsapp&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Render](https://img.shields.io/badge/Render-%2346E3B7.svg?style=for-the-badge&logo=render&logoColor=white)
 
-An intelligent, WhatsApp-native personal finance tracking agent. It uses an LLM to parse conversational expenses, logs them into a PostgreSQL database, and features an autonomous background agent for automated reporting.
+An intelligent, multimodal WhatsApp-native personal finance tracking agent. It uses advanced LLMs and Speech-to-Text (STT) models to parse conversational expenses from both text messages and voice notes, logs them into a PostgreSQL database, and features an autonomous background agent for automated reporting.
 
 **🔗 [Access the Live Admin Dashboard Here](https://autonomous-finance-tracker-ai-agent.streamlit.app/)**
 
@@ -13,7 +21,8 @@ An intelligent, WhatsApp-native personal finance tracking agent. It uses an LLM 
 
 ## ⚡ Key Features
 
-* **LLM-Powered Extraction:** Log expenses using everyday language (e.g., *"Spent 350 on petrol via UPI"*). The LLM strictly maps inputs to predefined database categories.
+* **LLM-Powered Extraction:** Log expenses using everyday natural language (e.g., *"Spent 350 on petrol via UPI"*). The TTT model strictly maps unstructured inputs to predefined database categories.
+* **Multimodal Inputs (Voice & Text):** Speak or type your expenses. The agent uses Groq's `whisper-large-v3-turbo` for instant Speech-to-Text (STT) transcription of WhatsApp voice notes, feeding seamlessly into the Text-to-Text (TTT) reasoning pipeline.
 * **Role-Based Access Control (RBAC):** Multi-tier security (`super_admin`, `admin`, `user`) with state-driven onboarding and in-chat approval workflows.
 * **Autonomous Background Scheduler:** A cron-based agent wakes up automatically to calculate and broadcast weekly financial summaries to approved users.
 * **Frictionless UI:** Numbered, text-based interactive menus within WhatsApp for quick actions (e.g., fetching summaries, deleting recent logs).
@@ -38,10 +47,10 @@ This system utilizes a microservices-inspired architecture to separate the messa
        │ │ (Path A: Direct Reply / Path B: Scheduled Push)
        ▼ │
 [FastAPI Backend] ─────► The Core Agentic System (Port 7860)
-       ├── [Access Guard]   (Validates user state and permissions)
-       ├── [LLM Parser]     (Groq API extracts structured JSON)
-       ├── [Task Scheduler] (APScheduler cron jobs -> POSTs to Node.js Port 3000)
-       └── [Database]       (Supabase/PostgreSQL manages relationships & cascades)
+       ├── [Access Guard]      (Validates user state and permissions)
+       ├── [AI Parser Engine]  (Groq Whisper for STT -> openai/gpt-oss-120b for TTT JSON extraction)
+       ├── [Task Scheduler]    (APScheduler cron jobs -> POSTs to Node.js Port 3000)
+       └── [Database]          (Supabase/PostgreSQL manages relationships & cascades)
        
 [Streamlit UI] ────────► Super Admin Visual Dashboard
 ```
