@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const express = require('express');
 const axios = require('axios');
@@ -85,8 +85,43 @@ async function connectToWhatsApp() {
         const msg = messages[0];
         if (!msg.message) return;
 
-        const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-        if (!text) return;
+        // Extract clean phone number (handle LID / alt JID)
+        let phoneJid = msg.key.remoteJid;
+        const whatsappLid = '+' + phoneJid.split('@')[0];
+        console.log("phone Jid :",phoneJid)
+        console.log("whatsappLid 1",whatsappLid)
+        if (msg.key.remoteJidAlt && msg.key.remoteJidAlt.includes('@s.whatsapp.net')) {
+            phoneJid = msg.key.remoteJidAlt;
+            console.log("phoneJid 2",phoneJid)
+        }
+
+        const senderPhone = '+' + phoneJid.split('@')[0];
+        
+
+        const isAudio = msg.message?.audioMessage;
+        let text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
+        let audioBase64 = null;
+        console.log(`📩 Processing message from ${senderPhone}: ${text}`);
+
+        // Download and convert voice note to Base64
+        if (isAudio) {
+            console.log(`🎤 Voice note received from ${senderPhone}. Downloading...`);
+            try {
+                const buffer = await downloadMediaMessage(
+                    msg,
+                    'buffer',
+                    { },
+                    { logger: pino({ level: 'silent' }) }
+                );
+                audioBase64 = buffer.toString('base64');
+                text = "[VOICE_NOTE]"; // Placeholder text
+            } catch (err) {
+                console.error('❌ Failed to download audio:', err.message);
+                return; // Abort if download fails
+            }
+        }
+
+        if (!text && !isAudio) return;
 
         // Admin & quick-reply filter rules
         const textLower = text.toLowerCase().trim();
@@ -104,18 +139,7 @@ async function connectToWhatsApp() {
             return;
         }
 
-        // Extract clean phone number (handle LID / alt JID)
-        let phoneJid = msg.key.remoteJid;
-        const whatsappLid = '+' + phoneJid.split('@')[0];
-        console.log("phone Jid :",phoneJid)
-        console.log("whatsappLid 1",whatsappLid)
-        if (msg.key.remoteJidAlt && msg.key.remoteJidAlt.includes('@s.whatsapp.net')) {
-            phoneJid = msg.key.remoteJidAlt;
-            console.log("phoneJid 2",phoneJid)
-        }
-
-        const senderPhone = '+' + phoneJid.split('@')[0];
-        console.log(`📩 Processing message from ${senderPhone}: ${text}`);
+        
 
         // Store message in cache for potential follow-up notifications
         lastMessageCache[senderPhone] = msg;
@@ -123,7 +147,8 @@ async function connectToWhatsApp() {
         try {
             const response = await axios.post(`http://127.0.0.1:${INTERNAL_PORT}/api/v1/whatsapp`, {
                 sender_phone: whatsappLid,
-                message_body: text
+                message_body: text,
+                audio_base64: audioBase64
             });
 
             const data = response.data;

@@ -1,13 +1,40 @@
 import json
-from groq import Groq
+from groq import AsyncGroq
 from app.core.config import settings
 from app.models.schemas import ExpenseExtraction, UpdateAlertTime, RouteToExpense
 from app.services.db_crud import update_summary_time
+import base64
+import tempfile
+import os
 
 # Intializing 'Groq' client
-client = Groq(api_key=settings.groq_api_key)
+client = AsyncGroq(api_key=settings.groq_api_key)
 
-def extract_expense_data(user_text: str) -> dict | None:
+async def transcribe_voice_note(audio_base64: str) -> str:
+    """Decodes base64 audio and transcribes it using Groq Whisper."""
+    audio_bytes = base64.b64decode(audio_base64)
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".ogg") as tmp_file:
+        tmp_file.write(audio_bytes)
+        tmp_file_path = tmp_file.name
+
+    try:
+        with open(tmp_file_path, "rb") as file:
+            transcription = await client.audio.transcriptions.create(
+                file=(tmp_file_path, file.read()),
+                model="whisper-large-v3-turbo",
+                response_format="text"
+            )
+        return transcription
+    except Exception as e:
+        print(f"❌ Whisper Transcription failed: {e}")
+        return None
+    finally:
+        # Prevent memory leaks by deleting the temp file
+        if os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)
+
+async def extract_expense_data(user_text: str) -> dict | None:
     # Converting Pydantic Model into string
     schema_definition = ExpenseExtraction.model_json_schema()
 
@@ -18,7 +45,7 @@ def extract_expense_data(user_text: str) -> dict | None:
 
     try:
         # Connecting with llm
-        chat_completion = client.chat.completions.create(
+        chat_completion = await client.chat.completions.create(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_text}
@@ -43,7 +70,7 @@ def extract_expense_data(user_text: str) -> dict | None:
         print(f"Extraction failed : {e}")
         return None
     
-def process_with_groq(user_text: str, user_id: str) -> str:
+async def process_with_groq(user_text: str, user_id: str) -> str:
     """
     Dedicated function for Option 6. 
     Uses native Tool Calling with Pydantic to parse time accurately.
@@ -59,7 +86,7 @@ def process_with_groq(user_text: str, user_id: str) -> str:
     ]
 
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=[
                 {"role": "system", "content": "Extract the time and convert to 24-hour HH:MM:SS format."},
