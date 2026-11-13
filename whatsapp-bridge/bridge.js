@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers, downloadMediaMessage, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const express = require('express');
 const axios = require('axios');
@@ -17,7 +17,8 @@ let pairingCodeRequested = false; // Flag to prevent infinite pairing requests
 
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('baileys_auth_info');
-    const version = [2, 3000, 1042626022];
+    const { version, isLatest } = await fetchLatestBaileysVersion();
+    console.log(`📡 Using WA v${version.join('.')}, isLatest: ${isLatest}`);
 
     // 1. Initialize the socket
     sock = makeWASocket({
